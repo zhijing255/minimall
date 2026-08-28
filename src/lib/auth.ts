@@ -1,77 +1,88 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
-  providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "邮箱", type: "email" },
-        password: { label: "密码", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+const SESSION_COOKIE = "session";
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "your-secret-key-change-in-production"
+);
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+// 密码哈希
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
 
-        if (!user || !user.password) {
-          return null;
-        }
+// 验证密码
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+// 设置 Session（写入 httpOnly Cookie）
+export async function setSession(userId: string, role: string) {
+  const token = await new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(JWT_SECRET);
 
-        if (!isPasswordValid) {
-          return null;
-        }
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 天
+    path: "/",
+  });
+}
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
+// 获取 Session（从 Cookie 读取）
+export async function getSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload as { userId: string; role: string };
+  } catch {
+    return null;
+  }
+}
+
+// 获取当前用户完整信息
+export async function getCurrentUser() {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      vipLevel: true,
+      totalSpent: true,
+      createdAt: true,
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
+  });
 
-        // 获取用户详细信息（包括 VIP 等级）
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { vipLevel: true, totalSpent: true, role: true },
-        });
+  return user;
+}
 
-        if (dbUser) {
-          session.user.vipLevel = dbUser.vipLevel;
-          session.user.totalSpent = dbUser.totalSpent;
-          session.user.role = dbUser.role;
-        }
-      }
-      return session;
-    },
-  },
-});
+// 清除 Session（退出登录）
+export async function clearSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE);
+}
