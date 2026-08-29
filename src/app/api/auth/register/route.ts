@@ -1,10 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { registerRateLimit } from "@/lib/rate-limit";
 
-export async function POST(req: Request) {
+// 简单的邮箱格式验证
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    // 速率限制
+    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const rateLimitResult = registerRateLimit(ip);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "注册尝试次数过多，请稍后再试" },
+        { status: 429 }
+      );
+    }
+
+    const { name, email, password } = await request.json();
 
     // 验证输入
     if (!name || !email || !password) {
@@ -14,6 +32,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // 验证邮箱格式
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "邮箱格式不正确" },
+        { status: 400 }
+      );
+    }
+
+    // 验证密码强度
     if (password.length < 6) {
       return NextResponse.json(
         { error: "密码至少需要 6 个字符" },

@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifyPassword, setSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { loginRateLimit } from "@/lib/rate-limit";
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    // 速率限制
+    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const rateLimitResult = loginRateLimit(ip);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "登录尝试次数过多，请稍后再试" },
+        { status: 429 }
+      );
+    }
+
+    const { email, password } = await request.json();
 
     // 验证输入
     if (!email || !password) {

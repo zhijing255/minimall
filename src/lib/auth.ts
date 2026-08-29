@@ -1,24 +1,31 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "./prisma";
 
 const SESSION_COOKIE = "session";
 
-// JWT Secret - 生产环境必须配置
-function getJWTSecret() {
+// JWT Secret - 生产环境必须配置，开发环境自动生成
+let devSecret: string | null = null;
+
+function getJWTSecret(): string {
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("生产环境必须配置 JWT_SECRET 环境变量");
-    }
-    console.warn("⚠️ 警告: 使用默认 JWT_SECRET，仅限开发环境");
-    return "dev-secret-key-not-for-production";
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("生产环境必须配置 JWT_SECRET 环境变量");
   }
-  return secret;
+
+  // 开发环境：生成并缓存随机密钥（重启后失效，Session 也会失效）
+  if (!devSecret) {
+    devSecret = crypto.randomBytes(32).toString("hex");
+    console.warn("⚠️ 未配置 JWT_SECRET，已自动生成随机密钥（仅限开发环境）");
+  }
+  return devSecret;
 }
 
-function getJWTSecretKey() {
+export function getJWTSecretKey() {
   return new TextEncoder().encode(getJWTSecret());
 }
 
@@ -99,4 +106,19 @@ export async function getCurrentUser() {
 export async function clearSession() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
+}
+
+// 要求管理员权限
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return { error: "请先登录", status: 401 };
+  }
+
+  if (user.role !== "ADMIN") {
+    return { error: "无管理员权限", status: 403 };
+  }
+
+  return { user };
 }
