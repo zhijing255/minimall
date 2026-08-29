@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(searchParams.get("registered") === "true");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +36,10 @@ export default function LoginPage() {
         return;
       }
 
-      // 登录成功，跳转到首页
-      router.push("/");
-      router.refresh();
+      // 登录成功，刷新用户状态并跳转
+      await refreshUser();
+      const from = searchParams.get("from") || "/";
+      router.push(from);
     } catch {
       setError("网络错误，请稍后重试");
     } finally {
@@ -55,6 +60,12 @@ export default function LoginPage() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {success && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-lg text-sm">
+              注册成功，请登录
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
               {error}
@@ -123,5 +134,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">加载中...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
