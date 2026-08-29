@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPrice } from "@/lib/utils";
+import { getVipDiscount } from "@/lib/vip";
 
 interface CartItem {
   id: string;
@@ -63,6 +64,8 @@ export default function CheckoutPage() {
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
+  const vipDiscount = getVipDiscount(user?.vipLevel ?? 0);
+  const discountedTotal = Math.round(originalTotal * vipDiscount * 100) / 100;
 
   // 提交订单
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,12 +163,13 @@ export default function CheckoutPage() {
                 <input
                   type="tel"
                   required
+                  pattern="^1[3-9]\d{9}$"
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="请输入联系电话"
+                  placeholder="请输入11位手机号"
                 />
               </div>
 
@@ -256,10 +260,26 @@ export default function CheckoutPage() {
                   {cartItems.reduce((sum, item) => sum + item.quantity, 0)} 件
                 </span>
               </div>
+              {vipDiscount < 1 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">商品总额</span>
+                    <span>¥{formatPrice(originalTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">
+                      VIP {Math.round(vipDiscount * 10)}折优惠
+                    </span>
+                    <span className="text-green-600">
+                      -¥{formatPrice(originalTotal - discountedTotal)}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>应付总额</span>
                 <span className="text-red-500">
-                  ¥{formatPrice(originalTotal)}
+                  ¥{formatPrice(vipDiscount < 1 ? discountedTotal : originalTotal)}
                 </span>
               </div>
             </div>

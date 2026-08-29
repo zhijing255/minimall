@@ -49,7 +49,7 @@ export default function OrderDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -96,6 +96,8 @@ export default function OrderDetailPage({
 
       if (res.ok) {
         setOrder((prev) => (prev ? { ...prev, status: "PAID" } : null));
+        // 刷新用户信息（VIP等级可能已升级）
+        await refreshUser();
       } else {
         const data = await res.json();
         setError(data.error || "支付失败");
@@ -123,6 +125,8 @@ export default function OrderDetailPage({
 
       if (res.ok) {
         setOrder((prev) => (prev ? { ...prev, status: "CANCELLED" } : null));
+        // 刷新用户信息（VIP等级可能已回退）
+        await refreshUser();
       } else {
         const data = await res.json();
         setError(data.error || "取消失败");

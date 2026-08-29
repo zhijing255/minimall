@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { parseImages } from "@/lib/utils";
+import { calculateVipLevel } from "@/lib/vip";
 
 // 获取订单详情 GET /api/orders/[id]
 export async function GET(
@@ -145,7 +146,7 @@ export async function PUT(
         );
       }
 
-      // 使用事务：更新订单状态 + 恢复库存
+      // 使用事务：更新订单状态 + 恢复库存 + 回退消费额（仅已支付订单）
       await prisma.$transaction(async (tx) => {
         // 1. 更新订单状态为 CANCELLED
         await tx.order.update({
@@ -168,6 +169,34 @@ export async function PUT(
             },
           });
         }
+
+        // 3. 如果订单已支付，回退消费额并重新计算VIP等级
+        if (order.status === "PAID") {
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              totalSpent: {
+                decrement: order.total,
+              },
+            },
+          });
+
+          // 获取最新用户信息，重新计算VIP等级
+          const updatedUser = await tx.user.findUnique({
+            where: { id: user.id },
+            select: { totalSpent: true, vipLevel: true },
+          });
+
+          if (updatedUser) {
+            const newVipLevel = calculateVipLevel(updatedUser.totalSpent);
+            if (newVipLevel !== updatedUser.vipLevel) {
+              await tx.user.update({
+                where: { id: user.id },
+                data: { vipLevel: newVipLevel },
+              });
+            }
+          }
+        }
       });
 
       return NextResponse.json({ message: "取消成功" });
@@ -178,12 +207,4 @@ export async function PUT(
     console.error("操作订单错误:", error);
     return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }
-}
-
-// 计算 VIP 等级
-function calculateVipLevel(totalSpent: number): number {
-  if (totalSpent >= 80000) return 3; // VIP3: ≥80000
-  if (totalSpent >= 10000) return 2; // VIP2: ≥10000
-  if (totalSpent >= 5000) return 1;  // VIP1: ≥5000
-  return 0; // 普通用户
 }
