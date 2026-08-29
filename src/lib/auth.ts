@@ -4,9 +4,23 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 const SESSION_COOKIE = "session";
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "your-secret-key-change-in-production"
-);
+
+// JWT Secret - 生产环境必须配置
+function getJWTSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("生产环境必须配置 JWT_SECRET 环境变量");
+    }
+    console.warn("⚠️ 警告: 使用默认 JWT_SECRET，仅限开发环境");
+    return "dev-secret-key-not-for-production";
+  }
+  return secret;
+}
+
+function getJWTSecretKey() {
+  return new TextEncoder().encode(getJWTSecret());
+}
 
 // 密码哈希
 export async function hashPassword(password: string): Promise<string> {
@@ -27,7 +41,7 @@ export async function setSession(userId: string, role: string) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getJWTSecretKey());
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -49,7 +63,7 @@ export async function getSession() {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJWTSecretKey());
     return payload as { userId: string; role: string };
   } catch {
     return null;

@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "your-secret-key-change-in-production"
-);
+// JWT Secret - 与 auth.ts 保持一致
+function getJWTSecretKey() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("生产环境必须配置 JWT_SECRET 环境变量");
+    }
+    return new TextEncoder().encode("dev-secret-key-not-for-production");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 // 需要登录的路由
 const protectedRoutes = ["/admin"];
@@ -23,7 +31,7 @@ export async function proxy(request: NextRequest) {
 
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
+      const { payload } = await jwtVerify(token, getJWTSecretKey());
       isAuthenticated = true;
       userRole = (payload.role as string) || "";
     } catch {

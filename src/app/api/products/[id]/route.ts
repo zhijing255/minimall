@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseImages } from "@/lib/utils";
 
 export async function GET(
   request: NextRequest,
@@ -38,7 +39,7 @@ export async function GET(
     // 解析图片 JSON 字符串
     const result = {
       ...product,
-      images: JSON.parse(product.images) as string[],
+      images: parseImages(product.images),
     };
 
     return NextResponse.json({ product: result });

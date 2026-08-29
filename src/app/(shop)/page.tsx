@@ -4,6 +4,7 @@ import SearchBar from "@/components/shop/SearchBar";
 import CategoryFilter from "@/components/shop/CategoryFilter";
 import ProductGrid from "@/components/shop/ProductGrid";
 import Pagination from "@/components/shop/Pagination";
+import { parseImages, parsePage, PAGE_SIZE } from "@/lib/utils";
 
 interface HomeProps {
   searchParams: Promise<{
@@ -17,8 +18,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
   const params = await searchParams;
   const search = params.search || "";
   const category = params.category || "";
-  const page = parseInt(params.page || "1", 10);
-  const pageSize = 9;
+  const page = parsePage(params.page);
 
   // 构建查询条件
   const where: Record<string, unknown> = {
@@ -50,8 +50,8 @@ export default async function HomePage({ searchParams }: HomeProps) {
         },
       },
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     prisma.product.count({ where }),
     prisma.category.findMany({
@@ -71,12 +71,12 @@ export default async function HomePage({ searchParams }: HomeProps) {
     }),
   ]);
 
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // 解析图片
   const productsWithImages = products.map((product) => ({
     ...product,
-    images: JSON.parse(product.images) as string[],
+    images: parseImages(product.images),
   }));
 
   const categoriesWithCount = categories.map((cat) => ({

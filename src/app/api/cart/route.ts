@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { parseImages, parseQuantity } from "@/lib/utils";
 
 // 获取购物车
 export async function GET() {
@@ -31,7 +32,7 @@ export async function GET() {
       ...item,
       product: {
         ...item.product,
-        images: JSON.parse(item.product.images) as string[],
+        images: parseImages(item.product.images),
       },
     }));
 
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
 
-    const { productId, quantity = 1 } = await request.json();
+    const { productId, quantity: rawQuantity = 1 } = await request.json();
+    const quantity = parseQuantity(rawQuantity);
 
     if (!productId) {
       return NextResponse.json({ error: "商品ID不能为空" }, { status: 400 });
@@ -116,9 +118,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
 
-    const { id, quantity } = await request.json();
+    const { id, quantity: rawQuantity } = await request.json();
+    const quantity = parseQuantity(rawQuantity);
 
-    if (!id || quantity === undefined) {
+    if (!id) {
       return NextResponse.json({ error: "参数错误" }, { status: 400 });
     }
 

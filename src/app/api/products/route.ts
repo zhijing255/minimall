@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseImages, parsePage, PAGE_SIZE } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "";
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const pageSize = 9;
+    const page = parsePage(searchParams.get("page"));
 
     // 构建查询条件
     const where: Record<string, unknown> = {
@@ -43,23 +43,23 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     });
 
     // 解析图片 JSON 字符串
     const productsWithImages = products.map((product) => ({
       ...product,
-      images: JSON.parse(product.images) as string[],
+      images: parseImages(product.images),
     }));
 
     return NextResponse.json({
       products: productsWithImages,
       pagination: {
         page,
-        pageSize,
+        pageSize: PAGE_SIZE,
         total,
-        totalPages: Math.ceil(total / pageSize),
+        totalPages: Math.ceil(total / PAGE_SIZE),
       },
     });
   } catch (error) {

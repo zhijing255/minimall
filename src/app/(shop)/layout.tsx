@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import CartIcon from "@/components/shop/CartIcon";
+import UserMenu from "@/components/shop/UserMenu";
 
 export default async function ShopLayout({
   children,
@@ -50,18 +52,8 @@ export default async function ShopLayout({
 
             {/* 右侧操作 */}
             <div className="flex items-center space-x-4">
-              <Link
-                href="/login"
-                className="text-gray-600 hover:text-indigo-600"
-              >
-                登录
-              </Link>
-              <Link
-                href="/register"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-              >
-                注册
-              </Link>
+              <CartIcon />
+              <UserMenu />
             </div>
           </div>
         </div>
@@ -74,7 +66,7 @@ export default async function ShopLayout({
       <footer className="bg-white border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <p className="text-center text-gray-500 text-sm">
-            © 2024 Mini Mall. 保留所有权利。
+            © {new Date().getFullYear()} Mini Mall. 保留所有权利。
           </p>
         </div>
       </footer>
