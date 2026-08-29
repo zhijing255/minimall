@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { registerRateLimit } from "@/lib/rate-limit";
+import { registerRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // 简单的邮箱格式验证
 function isValidEmail(email: string): boolean {
@@ -12,7 +12,7 @@ function isValidEmail(email: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // 速率限制
-    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const ip = getClientIp(request);
     const rateLimitResult = registerRateLimit(ip);
 
     if (!rateLimitResult.success) {

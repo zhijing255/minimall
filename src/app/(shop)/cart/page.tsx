@@ -25,6 +25,7 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // 获取购物车数据
   useEffect(() => {
@@ -52,29 +53,47 @@ export default function CartPage() {
     fetchCart();
   }, [user, authLoading, router]);
 
-  // 更新数量
-  const updateQuantity = async (id: string, quantity: number) => {
-    setUpdating(id);
-    try {
-      const res = await fetch(`/api/cart/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity }),
-      });
+  // 显示错误（3秒后自动消失）
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 3000);
+  };
 
-      if (res.ok) {
-        if (quantity <= 0) {
+  // 更新数量
+  const updateQuantity = async (id: string, newQuantity: number) => {
+    setError(null);
+    setUpdating(id);
+
+    try {
+      // 数量 <= 0 时调用删除 API
+      if (newQuantity <= 0) {
+        const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
+        if (res.ok) {
           setCartItems((items) => items.filter((item) => item.id !== id));
         } else {
+          const data = await res.json();
+          showError(data.error || "删除失败");
+        }
+      } else {
+        const res = await fetch(`/api/cart/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quantity: newQuantity }),
+        });
+
+        if (res.ok) {
           setCartItems((items) =>
             items.map((item) =>
-              item.id === id ? { ...item, quantity } : item
+              item.id === id ? { ...item, quantity: newQuantity } : item
             )
           );
+        } else {
+          const data = await res.json();
+          showError(data.error || "更新失败");
         }
       }
     } catch {
-      console.error("更新失败");
+      showError("网络错误，请稍后重试");
     } finally {
       setUpdating(null);
     }
@@ -82,17 +101,20 @@ export default function CartPage() {
 
   // 删除项
   const removeItem = async (id: string) => {
+    setError(null);
     setUpdating(id);
+
     try {
-      const res = await fetch(`/api/cart/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
 
       if (res.ok) {
         setCartItems((items) => items.filter((item) => item.id !== id));
+      } else {
+        const data = await res.json();
+        showError(data.error || "删除失败");
       }
     } catch {
-      console.error("删除失败");
+      showError("网络错误，请稍后重试");
     } finally {
       setUpdating(null);
     }
@@ -156,6 +178,13 @@ export default function CartPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-8">购物车</h1>
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 购物车列表 */}

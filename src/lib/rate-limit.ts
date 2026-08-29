@@ -7,20 +7,43 @@ interface RateLimitEntry {
 }
 
 const store = new Map<string, RateLimitEntry>();
+const MAX_STORE_SIZE = 10000; // 最大存储条目数
 
-// 清理过期条目
+// 清理过期条目并限制存储大小
 function cleanup() {
   const now = Date.now();
+  const keysToDelete: string[] = [];
+
   for (const [key, entry] of store.entries()) {
     if (now > entry.resetAt) {
+      keysToDelete.push(key);
+    }
+  }
+
+  // 删除过期条目
+  for (const key of keysToDelete) {
+    store.delete(key);
+  }
+
+  // 如果仍然超过限制，删除最早的条目
+  if (store.size > MAX_STORE_SIZE) {
+    const entries = Array.from(store.entries())
+      .sort((a, b) => a[1].resetAt - b[1].resetAt);
+
+    const toDelete = entries.slice(0, store.size - MAX_STORE_SIZE);
+    for (const [key] of toDelete) {
       store.delete(key);
     }
   }
 }
 
-// 定期清理（每5分钟）
-if (typeof setInterval !== "undefined") {
-  setInterval(cleanup, 5 * 60 * 1000);
+// Node.js 环境下定期清理（避免内存泄漏）
+if (typeof setInterval !== "undefined" && process.env.NODE_ENV !== "test") {
+  const interval = setInterval(cleanup, 5 * 60 * 1000);
+  // 允许进程退出
+  if (interval.unref) {
+    interval.unref();
+  }
 }
 
 interface RateLimitOptions {
@@ -58,6 +81,27 @@ export function rateLimit(
   // 增加计数
   entry.count++;
   return { success: true, remaining: max - entry.count, resetAt: entry.resetAt };
+}
+
+// 获取客户端真实 IP（优先使用 CF-Connecting-IP，其次是 X-Forwarded-For）
+export function getClientIp(request: Request): string {
+  // Cloudflare
+  const cfIp = request.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp;
+
+  // 反向代理
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    // 可能有多个 IP，取第一个
+    const firstIp = forwarded.split(",")[0].trim();
+    if (firstIp) return firstIp;
+  }
+
+  // Nginx
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp;
+
+  return "unknown";
 }
 
 // 登录速率限制：同一 IP 5分钟内最多 5 次失败尝试

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPassword, setSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { loginRateLimit } from "@/lib/rate-limit";
+import { loginRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     // 速率限制
-    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const ip = getClientIp(request);
     const rateLimitResult = loginRateLimit(ip);
 
     if (!rateLimitResult.success) {

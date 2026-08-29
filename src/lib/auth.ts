@@ -7,7 +7,10 @@ import { prisma } from "./prisma";
 const SESSION_COOKIE = "session";
 
 // JWT Secret - 生产环境必须配置，开发环境自动生成
-let devSecret: string | null = null;
+// 使用 globalThis 确保所有 Worker 进程共享同一个密钥
+const globalForDevSecret = globalThis as unknown as {
+  __devSecret?: string;
+};
 
 function getJWTSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -17,12 +20,12 @@ function getJWTSecret(): string {
     throw new Error("生产环境必须配置 JWT_SECRET 环境变量");
   }
 
-  // 开发环境：生成并缓存随机密钥（重启后失效，Session 也会失效）
-  if (!devSecret) {
-    devSecret = crypto.randomBytes(32).toString("hex");
+  // 开发环境：使用 globalThis 缓存，确保所有进程共享
+  if (!globalForDevSecret.__devSecret) {
+    globalForDevSecret.__devSecret = crypto.randomBytes(32).toString("hex");
     console.warn("⚠️ 未配置 JWT_SECRET，已自动生成随机密钥（仅限开发环境）");
   }
-  return devSecret;
+  return globalForDevSecret.__devSecret;
 }
 
 export function getJWTSecretKey() {
@@ -108,17 +111,24 @@ export async function clearSession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-// 要求管理员权限
-export async function requireAdmin() {
+// 用户类型
+type User = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+// 要求管理员权限 - 使用联合类型确保类型安全
+type AdminAuthResult =
+  | { success: true; user: User }
+  | { success: false; error: string; status: number };
+
+export async function requireAdmin(): Promise<AdminAuthResult> {
   const user = await getCurrentUser();
 
   if (!user) {
-    return { error: "请先登录", status: 401 };
+    return { success: false, error: "请先登录", status: 401 };
   }
 
   if (user.role !== "ADMIN") {
-    return { error: "无管理员权限", status: 403 };
+    return { success: false, error: "无管理员权限", status: 403 };
   }
 
-  return { user };
+  return { success: true, user };
 }
