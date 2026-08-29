@@ -17,14 +17,16 @@ async function main() {
   await prisma.verificationToken.deleteMany();
   await prisma.user.deleteMany();
 
-  // 创建用户
-  const password = await bcrypt.hash("password123", 12);
+  // 创建用户（密码与 CLAUDE.md 文档一致）
+  const adminPassword = await bcrypt.hash("admin123", 12);
+  const userPassword = await bcrypt.hash("user123", 12);
+  const vipPassword = await bcrypt.hash("vip123", 12);
 
   const admin = await prisma.user.create({
     data: {
       name: "管理员",
       email: "admin@example.com",
-      password: password,
+      password: adminPassword,
       role: "ADMIN",
     },
   });
@@ -33,7 +35,7 @@ async function main() {
     data: {
       name: "普通用户",
       email: "user@example.com",
-      password: password,
+      password: userPassword,
       role: "USER",
     },
   });
@@ -42,7 +44,7 @@ async function main() {
     data: {
       name: "VIP 用户",
       email: "vip@example.com",
-      password: password,
+      password: vipPassword,
       role: "USER",
       vipLevel: 2,
       totalSpent: 15000,
