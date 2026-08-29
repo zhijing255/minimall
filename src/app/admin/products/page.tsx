@@ -108,7 +108,6 @@ export default function AdminProductsPage() {
 
   const handleSearch = () => {
     setPagination((prev) => ({ ...prev, page: 1 }));
-    fetchProducts();
   };
 
   const handleOpenModal = (product?: Product) => {

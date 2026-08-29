@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   const auth = await requireAdmin();
@@ -10,12 +11,12 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search') || '';
-  const page = parseInt(searchParams.get('page') || '1');
-  const pageSize = parseInt(searchParams.get('pageSize') || '10');
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '10')));
   const categoryId = searchParams.get('categoryId') || '';
 
   try {
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (search) {
       where.OR = [

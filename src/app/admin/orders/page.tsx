@@ -114,7 +114,6 @@ export default function OrdersAdminPage() {
   // 搜索
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchOrders();
   };
 
   // 更新订单状态
@@ -287,7 +286,7 @@ export default function OrdersAdminPage() {
                         </p>
                         {order.vipDiscount < 1 && (
                           <p className="text-sm text-green-600">
-                            VIP折扣: {Math.round(order.vipDiscount * 10)}折
+                            VIP折扣: {(order.vipDiscount * 10).toFixed(1)}折
                           </p>
                         )}
                         <p className="text-sm font-bold">

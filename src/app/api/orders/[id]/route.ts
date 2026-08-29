@@ -172,14 +172,19 @@ export async function PUT(
 
         // 3. 如果订单已支付，回退消费额并重新计算VIP等级
         if (order.status === "PAID") {
-          await tx.user.update({
+          // 确保不会变成负数
+          const currentUser = await tx.user.findUnique({
             where: { id: user.id },
-            data: {
-              totalSpent: {
-                decrement: order.total,
-              },
-            },
+            select: { totalSpent: true },
           });
+
+          if (currentUser) {
+            const newTotalSpent = Math.max(0, currentUser.totalSpent - order.total);
+            await tx.user.update({
+              where: { id: user.id },
+              data: { totalSpent: newTotalSpent },
+            });
+          }
 
           // 获取最新用户信息，重新计算VIP等级
           const updatedUser = await tx.user.findUnique({

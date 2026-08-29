@@ -11,6 +11,7 @@ export default async function AdminLayout({
 
   if (!auth.success) {
     redirect(`/login?from=/admin`);
+    return null; // redirect 会抛异常，但 TypeScript 需要这个 return
   }
 
   return (

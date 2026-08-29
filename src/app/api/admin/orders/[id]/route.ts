@@ -134,15 +134,19 @@ export async function PUT(
           });
         }
 
-        // 回退消费额
-        await tx.user.update({
+        // 回退消费额（确保不会变成负数）
+        const user = await tx.user.findUnique({
           where: { id: order.userId },
-          data: {
-            totalSpent: {
-              decrement: order.total,
-            },
-          },
+          select: { totalSpent: true },
         });
+
+        if (user) {
+          const newTotalSpent = Math.max(0, user.totalSpent - order.total);
+          await tx.user.update({
+            where: { id: order.userId },
+            data: { totalSpent: newTotalSpent },
+          });
+        }
       });
     } else {
       // 普通状态更新
