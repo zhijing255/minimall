@@ -9,6 +9,15 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// 密码强度验证：至少8位，包含大小写字母和数字
+function isValidPassword(password: string): boolean {
+  if (password.length < 8) return false;
+  if (!/[a-z]/.test(password)) return false;
+  if (!/[A-Z]/.test(password)) return false;
+  if (!/[0-9]/.test(password)) return false;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 速率限制
@@ -32,6 +41,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 验证姓名长度
+    if (typeof name !== "string" || name.length > 50) {
+      return NextResponse.json(
+        { error: "姓名长度不能超过 50 个字符" },
+        { status: 400 }
+      );
+    }
+
     // 验证邮箱格式
     if (!isValidEmail(email)) {
       return NextResponse.json(
@@ -41,9 +58,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证密码强度
-    if (password.length < 6) {
+    if (!isValidPassword(password)) {
       return NextResponse.json(
-        { error: "密码至少需要 6 个字符" },
+        { error: "密码至少需要 8 个字符，且包含大小写字母和数字" },
         { status: 400 }
       );
     }
@@ -73,7 +90,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "注册成功", userId: user.id },
+      { message: "注册成功" },
       { status: 201 }
     );
   } catch (error) {

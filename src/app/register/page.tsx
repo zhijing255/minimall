@@ -25,8 +25,13 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("密码至少需要 6 个字符");
+    if (formData.password.length < 8) {
+      setError("密码至少需要 8 个字符");
+      return;
+    }
+
+    if (!/[a-z]/.test(formData.password) || !/[A-Z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
+      setError("密码必须包含大小写字母和数字");
       return;
     }
 
@@ -135,7 +140,7 @@ export default function RegisterPage() {
                   setFormData({ ...formData, password: e.target.value })
                 }
                 className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="至少 6 位"
+                placeholder="至少 8 位，含大小写字母和数字"
               />
             </div>
 

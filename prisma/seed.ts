@@ -51,27 +51,31 @@ async function main() {
     },
   });
 
-  console.log("创建用户:", { admin, user, vipUser });
+  console.log("创建用户:", {
+    admin: { id: admin.id, name: admin.name },
+    user: { id: user.id, name: user.name },
+    vipUser: { id: vipUser.id, name: vipUser.name },
+  });
 
   // 创建分类
   const categories = await Promise.all([
     prisma.category.create({
-      data: { name: "手机数码", slug: "phones", image: "/images/cat-phones.jpg" },
+      data: { name: "手机数码", slug: "phones", image: "https://picsum.photos/seed/phones/400/300" },
     }),
     prisma.category.create({
-      data: { name: "电脑办公", slug: "computers", image: "/images/cat-computers.jpg" },
+      data: { name: "电脑办公", slug: "computers", image: "https://picsum.photos/seed/computers/400/300" },
     }),
     prisma.category.create({
-      data: { name: "家用电器", slug: "appliances", image: "/images/cat-appliances.jpg" },
+      data: { name: "家用电器", slug: "appliances", image: "https://picsum.photos/seed/appliances/400/300" },
     }),
     prisma.category.create({
-      data: { name: "服饰鞋包", slug: "clothing", image: "/images/cat-clothing.jpg" },
+      data: { name: "服饰鞋包", slug: "clothing", image: "https://picsum.photos/seed/clothing/400/300" },
     }),
     prisma.category.create({
-      data: { name: "食品生鲜", slug: "food", image: "/images/cat-food.jpg" },
+      data: { name: "食品生鲜", slug: "food", image: "https://picsum.photos/seed/food/400/300" },
     }),
     prisma.category.create({
-      data: { name: "图书文具", slug: "books", image: "/images/cat-books.jpg" },
+      data: { name: "图书文具", slug: "books", image: "https://picsum.photos/seed/books/400/300" },
     }),
   ]);
 

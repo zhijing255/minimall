@@ -5,7 +5,7 @@ import { parseImages, parsePage, PAGE_SIZE } from "@/lib/utils";
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const search = searchParams.get("search") || "";
+    const search = (searchParams.get("search") || "").slice(0, 100); // 限制搜索长度
     const category = searchParams.get("category") || "";
     const page = parsePage(searchParams.get("page"));
 

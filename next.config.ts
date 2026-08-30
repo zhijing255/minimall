@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "picsum.photos",
       },
     ],
   },
@@ -31,6 +31,20 @@ const nextConfig: NextConfig = {
           {
             key: "X-XSS-Protection",
             value: "1; mode=block",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js RSC 需要 unsafe-inline
+              "style-src 'self' 'unsafe-inline'", // Tailwind 需要 unsafe-inline
+              "img-src 'self' https://picsum.photos data: blob:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://picsum.photos",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
           },
         ],
       },

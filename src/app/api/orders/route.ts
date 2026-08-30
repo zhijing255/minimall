@@ -133,22 +133,30 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 2. 扣减库存
+      // 2. 扣减库存（使用 where 条件防止超卖）
       for (const item of orderItems) {
-        await tx.product.update({
-          where: { id: item.productId },
+        const updated = await tx.product.updateMany({
+          where: {
+            id: item.productId,
+            stock: { gte: item.quantity },
+          },
           data: {
             stock: {
               decrement: item.quantity,
             },
           },
         });
+
+        // 如果更新行数为 0，说明库存不足（被其他请求抢走了）
+        if (updated.count === 0) {
+          throw new Error(`商品库存不足，请重新下单`);
+        }
       }
 
-      // 3. 清空购物车（选择性下单时只删除已下单的商品）
+      // 3. 清空购物车（选择性下单时只删除已下单的商品，必须带 userId 防止 IDOR）
       if (Array.isArray(cartItemIds) && cartItemIds.length > 0) {
         await tx.cartItem.deleteMany({
-          where: { id: { in: cartItemIds } },
+          where: { id: { in: cartItemIds }, userId: user.id },
         });
       } else {
         await tx.cartItem.deleteMany({
@@ -173,6 +181,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ order: result }, { status: 201 });
   } catch (error) {
+    // 区分库存不足错误和其他错误
+    if (error instanceof Error && error.message === "商品库存不足，请重新下单") {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("创建订单错误:", error);
     return NextResponse.json({ error: "创建订单失败" }, { status: 500 });
   }
