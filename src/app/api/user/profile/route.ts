@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
 
-    // 获取用户详细信息，包括订单统计
+    // 获取用户详细信息，包括订单统计（复用 currentUser.id）
     const user = await prisma.user.findUnique({
       where: { id: currentUser.id },
       select: {

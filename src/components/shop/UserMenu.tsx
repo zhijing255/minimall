@@ -9,7 +9,7 @@ export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部关闭菜单
+  // 点击外部关闭菜单 + ESC 键关闭
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -17,8 +17,18 @@ export default function UserMenu() {
       }
     }
 
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   if (loading) {
@@ -49,6 +59,9 @@ export default function UserMenu() {
       {/* 用户名按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-label="用户菜单"
         className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 transition-colors"
       >
         {/* 头像 */}
@@ -86,7 +99,12 @@ export default function UserMenu() {
 
       {/* 下拉菜单 */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          aria-label="用户操作"
+          className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+        >
           {/* 用户信息 */}
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">
@@ -99,6 +117,7 @@ export default function UserMenu() {
           <div className="py-1">
             <Link
               href="/profile"
+              role="menuitem"
               onClick={() => setIsOpen(false)}
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -110,6 +129,7 @@ export default function UserMenu() {
 
             <Link
               href="/orders"
+              role="menuitem"
               onClick={() => setIsOpen(false)}
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -121,6 +141,7 @@ export default function UserMenu() {
 
             <Link
               href="/cart"
+              role="menuitem"
               onClick={() => setIsOpen(false)}
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -134,6 +155,7 @@ export default function UserMenu() {
           {/* 退出登录 */}
           <div className="border-t border-gray-100 pt-1">
             <button
+              role="menuitem"
               onClick={() => {
                 setIsOpen(false);
                 logout();

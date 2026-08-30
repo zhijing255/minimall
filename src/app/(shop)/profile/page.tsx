@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,24 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data.user);
+      } else {
+        setError("获取用户信息失败");
+      }
+    } catch (err) {
+      console.error("获取用户信息失败:", err);
+      setError("网络错误，请稍后重试");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -35,21 +53,7 @@ export default function ProfilePage() {
     if (user) {
       fetchProfile();
     }
-  }, [user, authLoading]);
-
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch("/api/user/profile");
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data.user);
-      }
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, authLoading, fetchProfile, router]);
 
   if (authLoading || loading) {
     return (
@@ -69,6 +73,26 @@ export default function ProfilePage() {
               <div className="h-4 bg-gray-200 rounded w-3/4"></div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
+          <p>{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchProfile();
+            }}
+            className="mt-2 text-sm underline hover:no-underline"
+          >
+            重试
+          </button>
         </div>
       </div>
     );
@@ -168,7 +192,7 @@ export default function ProfilePage() {
                 ></div>
               </div>
               <p className="text-xs text-amber-600 mt-2">
-                再消费 ¥{(nextThreshold - profile.totalSpent).toLocaleString()} 即可升级
+                再消费 ¥{Math.max(0, nextThreshold - profile.totalSpent).toLocaleString()} 即可升级
               </p>
             </div>
           )}
