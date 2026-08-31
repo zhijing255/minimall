@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
         hostname: "picsum.photos",
       },
     ],
+    // 禁用 Vercel 图片优化（picsum.photos 超时时使用）
+    unoptimized: true,
   },
   // 安全响应头
   async headers() {
