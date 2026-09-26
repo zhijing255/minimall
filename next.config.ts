@@ -6,9 +6,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "picsum.photos",
+        hostname: "via.placeholder.com",
       },
     ],
+    // 禁用图片优化，避免 Vercel 代理外部图片时超时
+    unoptimized: true,
   },
   // 安全响应头
   async headers() {
@@ -38,9 +40,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js RSC 需要 unsafe-inline
               "style-src 'self' 'unsafe-inline'", // Tailwind 需要 unsafe-inline
-              "img-src 'self' https://picsum.photos data: blob:",
+              "img-src 'self' https://via.placeholder.com data: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://picsum.photos",
+              "connect-src 'self' https://via.placeholder.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
