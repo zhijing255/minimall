@@ -2,14 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // 允许的外部图片域名（根据实际情况配置）
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "via.placeholder.com",
-      },
-    ],
-    // 禁用图片优化，避免 Vercel 代理外部图片时超时
+    // 图片全部为本地静态文件，无需优化与外部域名白名单
     unoptimized: true,
   },
   // 安全响应头
@@ -40,9 +33,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js RSC 需要 unsafe-inline
               "style-src 'self' 'unsafe-inline'", // Tailwind 需要 unsafe-inline
-              "img-src 'self' https://via.placeholder.com data: blob:",
+              "img-src 'self' data: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://via.placeholder.com",
+              "connect-src 'self'",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

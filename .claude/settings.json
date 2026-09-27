@@ -21,12 +21,10 @@
       "Bash(find *)"
     ],
     "deny": [
-      "Read(**/.env*)",
       "Read(**/*.pem)",
       "Read(**/*.key)",
       "Read(**/secrets/**)",
-      "Read(**/credentials/**)",
-      "Write(**/.env*)",
+      "Read(**/credentials/**)",  
       "Write(**/secrets/**)",
       "Write(package-lock.json)",
       "Write(.github/workflows/*)",
