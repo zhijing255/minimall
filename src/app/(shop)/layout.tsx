@@ -1,22 +1,31 @@
 import { ReactNode } from "react";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import CartIcon from "@/components/shop/CartIcon";
 import UserMenu from "@/components/shop/UserMenu";
+
+// 导航分类几乎不变；跨请求缓存 60s，避免每次跳转都打一轮海外数据库往返
+const getNavCategories = unstable_cache(
+  () =>
+    prisma.category.findMany({
+      select: {
+        name: true,
+        slug: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+  ["shop-nav-categories"],
+  { revalidate: 60 }
+);
 
 export default async function ShopLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  // 获取分类用于导航
-  const categories = await prisma.category.findMany({
-    select: {
-      name: true,
-      slug: true,
-    },
-    orderBy: { name: "asc" },
-  });
+  // 获取分类用于导航（60s 缓存）
+  const categories = await getNavCategories();
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
